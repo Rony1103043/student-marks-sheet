@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Student Marks Management System</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- jsPDF core -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <!-- autoTable plugin (make sure it's AFTER jsPDF core) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body class="bg-gray-50">
+
+  <!-- Top Heading -->
+  <header class="bg-white shadow-sm">
+    <div class="text-center px-4 py-6">
+      <h1 class="text-xl font-bold text-gray-800">
+        Institute of Livestock Science and Technology (ILST), Gaibandha
+      </h1>
+      <p class="text-md font-medium text-gray-700">
+        Mark Sheet for Diploma in Livestock, Theory – 40 Marks
+      </p>
+      <p class="text-sm text-gray-600">
+        Session: 2024–2025, 9th Batch, Semester-1
+      </p>
+    </div>
+  </header>
+
+  <!-- Main Section -->
+  <main class="container mx-auto px-4 py-8">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <!-- Form -->
+      <div class="bg-white p-6 rounded-lg shadow-md">
+        <h2 class="text-xl font-semibold mb-4 text-gray-700">Enter Student Marks</h2>
+        <form id="studentForm" class="space-y-4">
+          <div>
+            <label for="rollNumber" class="block text-sm font-medium mb-1">Roll Number</label>
+            <select id="rollNumber" class="w-full px-3 py-2 border rounded-md">
+              <option value="">Select Roll Number</option>
+            </select>
+          </div>
+          <div><label>Class Test (20)</label><input type="number" id="classTest" min="0" max="20" class="w-full border rounded-md px-3 py-2"></div>
+          <div><label>Mid Term (30)</label><input type="number" id="midTerm" min="0" max="30" class="w-full border rounded-md px-3 py-2"></div>
+          <div><label>Assignment (20)</label><input type="number" id="assignment" min="0" max="20" class="w-full border rounded-md px-3 py-2"></div>
+          <div><label>Attendance (10)</label><input type="number" id="attendance" min="0" max="10" class="w-full border rounded-md px-3 py-2"></div>
+          <button type="submit" class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700">Save Marks</button>
+        </form>
+      </div>
+
+      <!-- Table -->
+      <div class="lg:col-span-2 bg-white p-6 rounded-lg shadow-md">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-xl font-semibold text-gray-700">Student Records</h2>
+          <button id="exportPdf" class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700">Export as PDF</button>
+        </div>
+        <div class="overflow-x-auto">
+          <table id="studentTable" class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-4 py-2 text-left text-sm font-medium text-gray-600">SL No</th>
+                <th class="px-4 py-2 text-left text-sm font-medium text-gray-600">Roll No</th>
+                <th class="px-4 py-2 text-left text-sm font-medium text-gray-600">Class Test</th>
+                <th class="px-4 py-2 text-left text-sm font-medium text-gray-600">Mid Term</th>
+                <th class="px-4 py-2 text-left text-sm font-medium text-gray-600">Assignment</th>
+                <th class="px-4 py-2 text-left text-sm font-medium text-gray-600">Attendance</th>
+                <th class="px-4 py-2 text-left text-sm font-medium text-gray-600">Total</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- JavaScript -->
+  <script>
+    const rollNumbers = [
+      "120142", "120143", "120144", "120146", "120147", "120148", "120149", "120150",
+      "120151", "120152", "120153", "120157", "120158", "120159", "120160", "120161",
+      "120162", "120163", "120164", "120165", "120166", "120167", "120168", "120169",
+      "120170", "120171", "120172", "120173", "120174", "120175", "120176", "120177",
+      "120178", "120179", "120180", "120181", "120182", "120183", "120391", "120400"
+    ];
+
+    let studentsData = [];
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const select = document.getElementById('rollNumber');
+      rollNumbers.forEach(roll => {
+        const option = document.createElement('option');
+        option.value = roll;
+        option.textContent = roll;
+        select.appendChild(option);
+      });
+
+      loadSavedData();
+
+      document.getElementById('studentForm').addEventListener('submit', e => {
+        e.preventDefault();
+        saveStudentData();
+      });
+
+      document.getElementById('exportPdf').addEventListener('click', exportToPdf);
+    });
+
+    function saveStudentData() {
+      const rollNumber = document.getElementById('rollNumber').value;
+      const classTest = parseInt(document.getElementById('classTest').value) || 0;
+      const midTerm = parseInt(document.getElementById('midTerm').value) || 0;
+      const assignment = parseInt(document.getElementById('assignment').value) || 0;
+      const attendance = parseInt(document.getElementById('attendance').value) || 0;
+      const total = classTest + midTerm + assignment + attendance;
+
+      const existingIndex = studentsData.findIndex(s => s.rollNumber === rollNumber);
+      const newData = { rollNumber, classTest, midTerm, assignment, attendance, total };
+
+      if (existingIndex !== -1) studentsData[existingIndex] = newData;
+      else studentsData.push(newData);
+
+      localStorage.setItem('studentsMarksData', JSON.stringify(studentsData));
+      updateStudentTable();
+      document.getElementById('studentForm').reset();
+    }
+
+    function loadSavedData() {
+      const saved = localStorage.getItem('studentsMarksData');
+      if (saved) {
+        studentsData = JSON.parse(saved);
+        updateStudentTable();
+      }
+    }
+
+    function updateStudentTable() {
+      const tbody = document.querySelector('#studentTable tbody');
+      tbody.innerHTML = '';
+      studentsData.sort((a, b) => a.rollNumber.localeCompare(b.rollNumber));
+      studentsData.forEach((s, i) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td class="px-4 py-2 text-sm">${i + 1}</td>
+          <td class="px-4 py-2 text-sm">${s.rollNumber}</td>
+          <td class="px-4 py-2 text-sm">${s.classTest}</td>
+          <td class="px-4 py-2 text-sm">${s.midTerm}</td>
+          <td class="px-4 py-2 text-sm">${s.assignment}</td>
+          <td class="px-4 py-2 text-sm">${s.attendance}</td>
+          <td class="px-4 py-2 text-sm">${s.total}</td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    function exportToPdf() {
+      try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF('landscape');
+
+        const headers = [["SL No", "Roll No", "Class Test", "Mid Term", "Assignment", "Attendance", "Total"]];
+        const data = studentsData.map((s, i) => [
+          i + 1, s.rollNumber, s.classTest, s.midTerm, s.assignment, s.attendance, s.total
+        ]);
+
+        const titleLines = [
+          "Institute of Livestock Science and Technology (ILST), Gaibandha",
+          "Mark Sheet for Diploma in Livestock, Theory – 40 Marks",
+          "Session: 2024–2025, 9th Batch, Semester-1"
+        ];
+
+        doc.setFontSize(14);
+        titleLines.forEach((line, idx) => {
+          const pageWidth = doc.internal.pageSize.getWidth();
+          const textWidth = doc.getTextWidth(line);
+          doc.text(line, (pageWidth - textWidth) / 2, 10 + idx * 7);
+        });
+
+        doc.autoTable({
+          head: headers,
+          body: data,
+          startY: 35,
+          theme: 'grid',
+          headStyles: { fillColor: [59, 130, 246], textColor: 255 },
+          styles: { fontSize: 8 }
+        });
+
+        doc.save("student_marks_report.pdf");
+      } catch (error) {
+        alert("PDF export failed: " + error.message);
+        console.error("PDF Export Error:", error);
+      }
+    }
+  </script>
+</body>
+</html>
